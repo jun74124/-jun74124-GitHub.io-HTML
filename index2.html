@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>西北HairSalon報價系統</title>
+  <style>
+    body { background: #1a1a1a; color: #f5f5f5; font-family: Arial, sans-serif; padding: 20px; }
+    .container { max-width: 900px; margin: auto; background: #2b2b2b; padding: 20px; border-radius: 10px; }
+    h1 { text-align: center; color: #ffcc99; }
+    .category { margin-bottom: 20px; }
+    .category h2 { color: #ffa07a; border-bottom: 1px solid #444; padding-bottom: 5px; cursor: pointer; }
+    .service-list { display: none; padding-left: 15px; }
+    .service { margin: 10px 0; }
+    label { display: inline-block; width: 300px; max-width: 100%; }
+    select, input[type="number"] { background: #444; color: #fff; border: none; padding: 5px; border-radius: 5px; width: 160px; }
+    .button-row { text-align: center; margin-top: 20px; }
+    button { background: #ffa07a; border: none; padding: 10px 20px; color: #000; border-radius: 5px; cursor: pointer; margin: 0 10px; }
+    #result { margin-top: 20px; background: #3c3c3c; padding: 15px; border-radius: 5px; }
+
+    ul { padding-left: 20px; }
+    ul li { margin-bottom: 5px; }
+
+    @media screen and (max-width: 600px) {
+      label {
+        width: 100%;
+        margin-bottom: 5px;
+      }
+
+      .service {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      select, input[type="number"] {
+        width: 100%;
+        margin-top: 5px;
+      }
+
+      .button-row {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>西北 HairSalon 報價系統</h1>
+    <p>請點選分類展開，選擇服務與價格，可自訂價格，按下「計算報價」取得總金額與服務時間。</p>
+    <div id="service-container"></div>
+    <div class="button-row">
+      <button onclick="calculate()">計算報價</button>
+      <button onclick="clearForm()">清除</button>
+    </div>
+    <div id="result"></div>
+  </div>
+
+  <script>
+    const services = [
+      {
+        category: "專業燙髮（包含剪髮、洗髮 、燙前中後基礎修護 ）",
+        items: [
+          { name: "冷塑燙", time: 120, prices: ["短 2800","中 3000","長 3200","極長 3500"] },
+          { name: "溫塑燙", time: 180, prices: ["短 3800","中 4000","長 4200","極長 4500"] },
+          { name: "縮毛矯正", time: 180, prices: ["短 3800","中 4000","長 4200","極長 4500"] }
+        ]
+      },
+      {
+        category: "專業染髮（包含剪髮、洗髮、染前頭皮隔離、染中後基礎修護 ）",
+        items: [
+          { name: "染髮", time: 120, prices: ["短 2800","中 3000","長 3200","極長 3500"] },
+          { name: "挑染", time: 90, prices: ["頂區 1000","半頭 2000","全頭 3000"] },
+          { name: "設計染髮", time: 120, prices: [] },
+          { name: "AirTouch", time: 480, prices: ["短 8000","中 10000","長 12000","極長 15000"] },
+          { name: "髮根補染（不含剪）", time: 120, prices: ["全頭3cm 1800"] }
+        ]
+      },
+      {
+        category: "護髮（含洗）",
+        items: [
+          { name: "素髮美人修護", time: 60, prices: ["2000"] },
+          { name: "Bond RX 超鏈結護髮", time: 60, prices: ["2000"] },
+          { name: "IAU 細胞修護", time: 60, prices: ["短 1800","中 2000","長 2200","極長 2500"] },
+          { name: "IAU 髮膜修護", time: 60, prices: ["短 1200","中 1400","長 1600","極長 1800"] },
+          { name: "AWG胺瓶修護", time: 60, prices: ["1200"] }
+        ]
+      },
+      {
+        category: "頭皮護理",
+        items: [
+          { name: "冷橘頭皮護理", time: 60, prices: ["700"] },
+          { name: "IAU 膠原泡泡", time: 60, prices: ["900"] },
+          { name: "外泌體薀髮", time: 120, prices: ["5000"] }
+        ]
+      },
+      {
+        category: "洗髮",
+        items: [
+          { name: "健康洗髮", time: 45, prices: ["400"] },
+          { name: "夾捲/夾直", time: 20, prices: ["200"] }
+        ]
+      },
+      {
+        category: "專業剪髮",
+        items: [
+          { name: "剪髮", time: 60, prices: ["600"] },
+          { name: "大學生剪髮", time: 60, prices: ["500"] },
+          { name: "高中生剪髮", time: 60, prices: ["400"] },
+          { name: "國中生以下剪髮", time: 60, prices: ["350"] }
+        ]
+      },
+      {
+        category: "化妝 / 造型(時段不同價格不同)",
+        items: [
+          { name: "化妝", time: 60, prices: ["800", "1200", "1500"] },
+          { name: "造型", time: 60, prices: ["300", "500", "800"] },
+          { name: "新娘秘書", time: 300, prices: ["15000"] }
+        ]
+      },
+      {
+        category: "羽量級接髮",
+        items: [
+          { name: "18寸", time: 60, prices: ["單束 115","二十束 2300","漂二十束 3300"] },
+          { name: "22寸", time: 60, prices: ["單束 125","二十束 2500","漂二十束 3500"] },
+          { name: "26寸", time: 60, prices: ["單束 135","二十束 2700","漂二十束 3700"] },
+          { name: "挑染套餐", time: 60, prices: ["十束 2500"] },
+          { name: "接髮套餐", time: 120, prices: ["一百束 15000","一百五十束 20000","二百束 25000"] },
+          { name: "拆接髮", time: 120, prices: ["4500"] },
+          { name: "拆髮", time: 60, prices: ["2000"] }
+        ]
+      },
+      {
+        category: "三合一（優惠）",
+        items: [
+          { name: "剪+燙+染", time: 300, prices: ["短 5800","中 6000","長 6200","極長 6500"] }
+        ]
+      },
+      {
+        category: "新來的您找Candy （優惠）",
+        items: [
+          { name: "洗髮+剪髮", time: 60, prices: ["699"] }
+        ]
+      },
+      {
+        category: "燙染加購優惠",
+        items: [
+          { name: "素髮美人修護", time: 15, prices: ["1000"] },
+          { name: "Bond RX 超鏈結護髮", time: 15, prices: ["1000"] },
+          { name: "漂髮", time: 60, prices: ["一次 1000","二次 2000","三次 3000"] }
+          ]
+      }
+    ];
+
+    const container = document.getElementById("service-container");
+    services.forEach(group => {
+      const categoryDiv = document.createElement("div");
+      categoryDiv.className = "category";
+      categoryDiv.innerHTML = `<h2 onclick="toggleSection(this)">${group.category}</h2>`;
+      const list = document.createElement("div");
+      list.className = "service-list";
+      group.items.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "service";
+        const options = item.prices.map(p => {
+          const value = p.match(/\d+/g)?.pop() || 0;
+          return `<option value="${value}">${p} 元</option>`;
+        }).join("");
+        div.innerHTML = `
+          <label>${item.name} (${item.time} 分鐘)</label>
+          <select data-time="${item.time}" data-name="${item.name}" onchange="toggleCustom(this)">
+            <option value="0">不選擇</option>
+            ${options}
+            <option value="custom">自訂價格</option>
+          </select>
+          <input type="number" placeholder="輸入價格" style="display:none;" />
+        `;
+        list.appendChild(div);
+      });
+      categoryDiv.appendChild(list);
+      container.appendChild(categoryDiv);
+    });
+
+    function toggleSection(header) {
+      const list = header.nextElementSibling;
+      list.style.display = list.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function toggleCustom(select) {
+      const input = select.nextElementSibling;
+      input.style.display = select.value === 'custom' ? 'inline-block' : 'none';
+    }
+
+    function calculate() {
+      let totalTime = 0;
+      let totalPrice = 0;
+      let selectedServices = [];
+
+      document.querySelectorAll('.service').forEach(service => {
+        const select = service.querySelector('select');
+        const input = service.querySelector('input');
+        const time = parseInt(select.dataset.time);
+        const name = select.dataset.name;
+        const value = select.value;
+
+        let price = 0;
+        if (value === 'custom') {
+          price = parseInt(input.value) || 0;
+        } else {
+          price = parseInt(value) || 0;
+        }
+
+        if (price > 0) {
+          totalTime += time;
+          totalPrice += price;
+          selectedServices.push(`${name} - ${price} 元`);
+        }
+      });
+
+      const hours = (totalTime / 60).toFixed(1);
+
+      const result = document.getElementById('result');
+      result.innerHTML = `
+        <p><strong>報價結果</strong></p>
+        <p>總金額：${totalPrice} 元</p>
+        <p>總服務時間：${totalTime} 分鐘（約 ${hours} 小時）</p>
+        ${selectedServices.length > 0 ? `<p>已選項目：</p><ul>${selectedServices.map(s => `<li>${s}</li>`).join('')}</ul>` : ""}
+      `;
+    }
+
+    function clearForm() {
+      document.querySelectorAll('select').forEach(select => select.value = '0');
+      document.querySelectorAll('input[type="number"]').forEach(input => {
+        input.value = '';
+        input.style.display = 'none';
+      });
+      document.getElementById('result').innerHTML = '';
+    }
+  </script>
+</body>
+</html>
